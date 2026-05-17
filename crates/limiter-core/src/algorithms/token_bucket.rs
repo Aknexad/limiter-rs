@@ -1,4 +1,37 @@
+use std::time::{SystemTime, UNIX_EPOCH};
+
+#[allow(dead_code)]
+#[derive(Debug)]
 pub struct TokenBucket {
-    capacity: u64,
-    refill_rate: u64,
+    pub capacity: u64,
+    pub refill_rate: u64,
+    pub current_tokens: u64,
+    pub(crate) last_refill_timestamp: u64,
+}
+
+impl TokenBucket {
+    pub fn new() -> Self {
+        Self {
+            capacity: 10,
+            refill_rate: 1,
+            current_tokens: 10,
+            last_refill_timestamp: Self::timestamp(),
+        }
+    }
+
+    pub fn refill_logic(last_refill: u64, refill_rate: u64, capacity: u64) -> u64 {
+        let current_time = Self::timestamp();
+
+        let elapsed_time = current_time - last_refill;
+        let new_tokens = elapsed_time * refill_rate;
+
+        new_tokens.min(capacity)
+    }
+
+    fn timestamp() -> u64 {
+        SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_secs()
+    }
 }
