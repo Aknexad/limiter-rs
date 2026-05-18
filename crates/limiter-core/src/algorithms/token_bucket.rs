@@ -3,18 +3,30 @@ use std::time::{SystemTime, UNIX_EPOCH};
 #[allow(dead_code)]
 #[derive(Debug)]
 pub struct TokenBucket {
+    pub id: String,
     pub capacity: u64,
     pub refill_rate: u64,
     pub current_tokens: u64,
-    pub(crate) last_refill_timestamp: u64,
+    pub(crate) last_refill_timestamp: u64, // user pub(crate) for reminder of this mothode
 }
 
 impl TokenBucket {
-    pub fn new() -> Self {
+    pub fn new_defult_value() -> Self {
         Self {
-            capacity: 10,
+            id: Self::timestamp().to_string(),
+            capacity: 100,
             refill_rate: 1,
             current_tokens: 10,
+            last_refill_timestamp: Self::timestamp(),
+        }
+    }
+
+    pub fn new(capacity: u64, refill_rate: u64) -> Self {
+        Self {
+            id: Self::timestamp().to_string(),
+            capacity,
+            refill_rate,
+            current_tokens: capacity,
             last_refill_timestamp: Self::timestamp(),
         }
     }
