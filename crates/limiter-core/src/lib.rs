@@ -9,13 +9,18 @@ pub fn debug() {
 
     println!("user bucket data => {:?}", user_bucket);
 
-    let refill_token = algorithms::token_bucket::TokenBucket::refill_logic(
-        1779130636,
+    let current_tokens = algorithms::token_bucket::TokenBucket::refill_logic(
+        1779194046,
         user_bucket.refill_rate,
         user_bucket.capacity,
     );
 
-    println!("total left for this requst {}", refill_token);
+    println!("total left for this requst {}", current_tokens);
+
+    let requst_status =
+        algorithms::token_bucket::TokenBucket::allow_deny_request(current_tokens, 40);
+
+    println!("resutl of requst {}", requst_status);
 }
 
 // cargo run --example demo -p limiter-core

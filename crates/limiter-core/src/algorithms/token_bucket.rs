@@ -3,7 +3,6 @@ use std::time::{SystemTime, UNIX_EPOCH};
 #[allow(dead_code)]
 #[derive(Debug)]
 pub struct TokenBucket {
-    pub id: String,
     pub capacity: u64,
     pub refill_rate: u64,
     pub current_tokens: u64,
@@ -13,7 +12,6 @@ pub struct TokenBucket {
 impl TokenBucket {
     pub fn new_defult_value() -> Self {
         Self {
-            id: Self::timestamp().to_string(),
             capacity: 100,
             refill_rate: 1,
             current_tokens: 10,
@@ -23,7 +21,6 @@ impl TokenBucket {
 
     pub fn new(capacity: u64, refill_rate: u64) -> Self {
         Self {
-            id: Self::timestamp().to_string(),
             capacity,
             refill_rate,
             current_tokens: capacity,
@@ -35,9 +32,13 @@ impl TokenBucket {
         let current_time = Self::timestamp();
 
         let elapsed_time = current_time - last_refill;
-        let new_tokens = elapsed_time * refill_rate;
+        let current_tokens = elapsed_time * refill_rate;
 
-        new_tokens.min(capacity)
+        current_tokens.min(capacity)
+    }
+
+    pub fn allow_deny_request(current_tokens: u64, consum_tokens: u64) -> bool {
+        consum_tokens <= current_tokens
     }
 
     fn timestamp() -> u64 {
