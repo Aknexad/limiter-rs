@@ -1,4 +1,4 @@
-use std::time::{SystemTime, UNIX_EPOCH};
+use crate::utils::time::timestamp;
 
 #[allow(dead_code)]
 #[derive(Debug)]
@@ -11,11 +11,12 @@ pub struct TokenBucket {
 
 impl TokenBucket {
     pub fn new_defult_value() -> Self {
+        //test fn
         Self {
             capacity: 100,
             refill_rate: 1,
             current_tokens: 10,
-            last_refill_timestamp: Self::timestamp(),
+            last_refill_timestamp: timestamp(),
         }
     }
 
@@ -24,12 +25,12 @@ impl TokenBucket {
             capacity,
             refill_rate,
             current_tokens: capacity,
-            last_refill_timestamp: Self::timestamp(),
+            last_refill_timestamp: timestamp(),
         }
     }
 
     pub fn refill_logic(last_refill: u64, refill_rate: u64, capacity: u64) -> u64 {
-        let current_time = Self::timestamp();
+        let current_time = timestamp();
 
         let elapsed_time = current_time - last_refill;
         let current_tokens = elapsed_time * refill_rate;
@@ -39,12 +40,5 @@ impl TokenBucket {
 
     pub fn allow_deny_request(current_tokens: u64, consum_tokens: u64) -> bool {
         consum_tokens <= current_tokens
-    }
-
-    fn timestamp() -> u64 {
-        SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .unwrap()
-            .as_secs()
     }
 }
