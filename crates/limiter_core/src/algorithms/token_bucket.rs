@@ -1,7 +1,7 @@
 use crate::utils::time::timestamp;
 
 #[allow(dead_code)]
-#[derive(Debug,Clone)]
+#[derive(Debug, Clone)]
 pub struct TokenBucket {
     pub capacity: u64,
     pub refill_rate: u64,

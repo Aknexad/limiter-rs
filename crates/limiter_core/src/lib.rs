@@ -35,18 +35,13 @@ impl RateLimiter for algorithms::token_bucket::TokenBucket {
 pub fn debug() {
     let user_bucket = algorithms::token_bucket::TokenBucket::new_default_value();
 
-    let store = limiter_storage::memory::memory_store::MemoryStore::new();
+    let db = limiter_storage::memory::memory_store::MemoryStore::new();
 
-    store.insert(1, user_bucket);
+    limiter_storage::store::QueryDatabase::create(&db, 1, user_bucket);
 
+    let data = limiter_storage::store::QueryDatabase::find(&db, &1);
 
-if let Some(data) = store.get(&1) {
-        println!("Found user bucket: {:?}", data);
-    }else {
-        println!("not bucket Found")
-    }
-
-
+    println!("user bucket daa => {:?}", data);
 
     // println!("user bucket data => {:?}", user_bucket);
 
