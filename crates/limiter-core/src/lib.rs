@@ -5,7 +5,7 @@ pub trait RateLimiter {
     fn allow(&self, key: &str) -> bool;
 
     fn message(&self) {
-        println!("a request resice !");
+        println!("a request arrives !");
     }
     fn status(&self) -> String;
 }
@@ -19,7 +19,7 @@ impl RateLimiter for algorithms::token_bucket::TokenBucket {
             self.capacity,
         );
 
-        println!("total left for this requst {}", current_tokens);
+        println!("total left for this request {}", current_tokens);
 
         algorithms::token_bucket::TokenBucket::allow_deny_request(current_tokens, 39)
     }
@@ -32,7 +32,7 @@ impl RateLimiter for algorithms::token_bucket::TokenBucket {
 }
 
 pub fn debug() {
-    let user_bucket = algorithms::token_bucket::TokenBucket::new_defult_value();
+    let user_bucket = algorithms::token_bucket::TokenBucket::new_default_value();
 
     user_bucket.message();
 
@@ -40,7 +40,7 @@ pub fn debug() {
 
     println!("trait call {}", user_bucket.status());
 
-    println!("resutl of requst {}", user_bucket.allow("fj-23"));
+    println!("result of request {}", user_bucket.allow("fj-23"));
 }
 
 // cargo run --example demo -p limiter-core
