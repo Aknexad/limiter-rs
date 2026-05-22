@@ -1,4 +1,4 @@
-mod algorithms;
+pub mod algorithms;
 mod utils;
 
 pub trait RateLimiter {

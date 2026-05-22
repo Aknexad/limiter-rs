@@ -1,4 +1,4 @@
 [workspace]
-members = ["crates/limiter-core"]
+members = ["crates/limiter_storage","crates/limiter_core"]
 
 resolver = "3"
