@@ -4,4 +4,4 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-limiter_core = {path="../limiter_core"}
+#limiter_core = {path="../limiter_core"}

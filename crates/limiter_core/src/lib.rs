@@ -1,5 +1,6 @@
 pub mod algorithms;
 mod utils;
+use limiter_storage;
 
 pub trait RateLimiter {
     fn allow(&self, key: &str) -> bool;
@@ -34,13 +35,24 @@ impl RateLimiter for algorithms::token_bucket::TokenBucket {
 pub fn debug() {
     let user_bucket = algorithms::token_bucket::TokenBucket::new_default_value();
 
-    user_bucket.message();
+    let store = limiter_storage::memory::memory_store::MemoryStore::new();
 
-    println!("user bucket data => {:?}", user_bucket);
+    store.insert(1, user_bucket);
 
-    println!("trait call {}", user_bucket.status());
 
-    println!("result of request {}", user_bucket.allow("fj-23"));
+if let Some(data) = store.get(&1) {
+        println!("Found user bucket: {:?}", data);
+    }else {
+        println!("not bucket Found")
+    }
+
+
+
+    // println!("user bucket data => {:?}", user_bucket);
+
+    // println!("trait call {}", user_bucket.status());
+
+    // println!("result of request {}", user_bucket.allow("fj-23"));
 }
 
 // cargo run --example demo -p limiter-core
