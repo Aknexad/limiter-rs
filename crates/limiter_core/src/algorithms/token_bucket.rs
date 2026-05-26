@@ -41,4 +41,8 @@ impl TokenBucket {
     pub fn allow_deny_request(current_tokens: u64, consume_tokens: u64) -> bool {
         consume_tokens <= current_tokens
     }
+
+    pub fn reminder_token_after_request(consume_token: u64, current_tokens: u64) -> u64 {
+        current_tokens - consume_token
+    }
 }

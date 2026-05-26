@@ -1,9 +1,10 @@
-use crate::algorithms::token_bucket::{self, TokenBucket};
+use crate::algorithms::token_bucket::TokenBucket;
 use crate::models::BucketState;
+use crate::types::{CheckRequestInput};
 use crate::utils;
 use limiter_storage::store::QueryDatabase;
 pub trait RateLimiter {
-    fn allow<S>(&self, key: String, storage: &S) -> bool
+    fn check_rate<S>(&self, key: String, consume: u64, storage: &S) -> bool
     where
         S: QueryDatabase<String, BucketState>;
 
@@ -14,14 +15,23 @@ pub trait RateLimiter {
 }
 
 impl RateLimiter for TokenBucket {
-    fn allow<S>(&self, key: String, storage: &S) -> bool
+    fn check_rate<S>(&self, key: String, consume: u64, storage: &S) -> bool
     where
         S: QueryDatabase<String, BucketState>,
     {
         let bucket = storage.find(&key);
 
         match bucket {
-            Some(data) => check_request(key, data, storage),
+            Some(data) => check_request(
+                CheckRequestInput {
+                    id: key,
+                    bucket_state: data,
+                    refill_rate: self.refill_rate,
+                    capacity: self.capacity,
+                    consume,
+                },
+                storage,
+            ),
             None => create_new_consumer(key, storage),
         }
     }
@@ -33,27 +43,28 @@ impl RateLimiter for TokenBucket {
     }
 }
 
-fn check_request<S>(id: String, data: BucketState, storage: &S) -> bool
+fn check_request<S>(data: CheckRequestInput<BucketState>, storage: &S) -> bool
 where
     S: QueryDatabase<String, BucketState>,
 {
-    let token_bucket_status = TokenBucket::new(100, 1);
-
     let total_left_token = TokenBucket::refill_logic(
-        data.last_refill_timestamp,
-        token_bucket_status.refill_rate,
-        token_bucket_status.capacity,
+        data.bucket_state.last_refill_timestamp,
+        data.refill_rate,
+        data.capacity,
     );
 
-    let result = TokenBucket::allow_deny_request(total_left_token, 10);
+    let result = TokenBucket::allow_deny_request(total_left_token, data.consume);
 
     if result {
+        let token_left_after_request =
+            TokenBucket::reminder_token_after_request(total_left_token, data.consume);
+
         let new_data: BucketState = BucketState {
-            current_tokens: 23,
+            current_tokens: token_left_after_request,
             last_refill_timestamp: utils::time::timestamp(),
         };
         //update db
-        storage.update_bucket_status(id, new_data);
+        storage.update_bucket_status(data.id, new_data);
         println!("update bucket status");
         return result;
     } else {

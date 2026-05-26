@@ -15,7 +15,7 @@ where
 {
     fn create(&self, id: K, data: V) {
         let mut write_db = self.map.write().unwrap();
-        write_db.insert(id, data);
+        write_db.entry(id).or_insert_with(|| data);
     }
 
     fn find(&self, id: &K) -> Option<V>
