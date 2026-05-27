@@ -1,6 +1,6 @@
 use crate::algorithms::token_bucket::TokenBucket;
 use crate::models::BucketState;
-use crate::types::{CheckRequestInput};
+use crate::types::CheckRequestInput;
 use crate::utils;
 use limiter_storage::store::QueryDatabase;
 pub trait RateLimiter {

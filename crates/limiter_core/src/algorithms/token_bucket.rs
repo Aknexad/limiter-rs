@@ -6,12 +6,12 @@ pub struct TokenBucket {
     pub capacity: u64,
     pub refill_rate: u64,
     pub current_tokens: u64,
-    pub(crate) last_refill_timestamp: u64, // user pub(crate) for reminder of this method
+    pub last_refill_timestamp: u64,
 }
 
 impl TokenBucket {
+    //test function
     pub fn new_default_value() -> Self {
-        //test fn
         Self {
             capacity: 100,
             refill_rate: 1,
