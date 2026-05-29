@@ -19,7 +19,7 @@ impl RateLimiter for TokenBucket {
     where
         S: QueryDatabase<String, BucketState>,
     {
-        let bucket = storage.find(&key);
+        let bucket = storage.find(key.clone());
 
         match bucket {
             Some(data) => check_request(
@@ -32,7 +32,7 @@ impl RateLimiter for TokenBucket {
                 },
                 storage,
             ),
-            None => create_new_consumer(key, storage),
+            None => create_new_consumer(key, self.capacity, consume, storage),
         }
     }
     fn status(&self) -> String {
@@ -64,7 +64,7 @@ where
             last_refill_timestamp: utils::time::timestamp(),
         };
         //update db
-        storage.update_bucket_status(data.id, new_data);
+        storage.update_bucket_status(data.id, new_data,None);
         println!("update bucket status");
         return result;
     } else {
@@ -72,13 +72,14 @@ where
     }
 }
 
-fn create_new_consumer<S>(id: String, storage: &S) -> bool
+fn create_new_consumer<S>(id: String, capacity: u64, consume: u64, storage: &S) -> bool
 where
     S: QueryDatabase<String, BucketState>,
 {
-    let new_bucket = BucketState::new(100, utils::time::timestamp());
+    let current_tokens = capacity - consume;
+    let new_bucket = BucketState::new(current_tokens, utils::time::timestamp());
     println!("create new bucket for user with id {}", &id);
-    storage.create(id, new_bucket);
+    storage.create(id, new_bucket,None);
 
     true
 }

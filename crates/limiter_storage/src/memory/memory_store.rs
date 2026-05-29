@@ -1,10 +1,15 @@
 use std::collections::HashMap;
 use std::sync::RwLock;
 
+#[derive(Debug)]
+pub struct StoredValue<V> {
+    pub value: V,
+    pub expires_at: Option<u64>,
+}
 #[allow(dead_code)]
 #[derive(Debug)]
 pub struct MemoryStore<K, V> {
-    pub map: RwLock<HashMap<K, V>>,
+    pub map: RwLock<HashMap<K, StoredValue<V>>>,
 }
 
 impl<K, V> MemoryStore<K, V>
@@ -16,16 +21,4 @@ where
             map: RwLock::new(HashMap::new()),
         }
     }
-
-    // pub fn  insert(&self, key: K, value: V) {
-    //     let mut w = self.map.write().unwrap();
-    //     w.insert(key, value);
-    // }
-
-    // pub fn get(&self, key: &K) -> Option<V>
-    // where V: Clone
-    // {
-    //     let r = self.map.read().unwrap();
-    //     r.get(key).cloned()
-    // }
 }
