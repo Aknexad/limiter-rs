@@ -1,4 +1,9 @@
-use limiter_core::{algorithms, limiter::RateLimiter, policy};
+use limiter_core::{
+    algorithms,
+    limiter::RateLimiter,
+    models::{self, key::RateLimiterInputKey::Ip},
+    policy,
+};
 use limiter_storage::{memory::memory_store::MemoryStore, store::QueryDatabase};
 
 fn main() {
@@ -13,13 +18,18 @@ fn main() {
         config.token_bucket_refill_rate,
     );
 
-    let bucket_id: String = "1".to_string();
+    let input_data = models::key::RateLimiterInputData {
+        service_name: "auth".to_string(),
+        key:Ip("85.23.11.34".to_string()),
+    };
+
+    let key = input_data.convert_to_storage_key();
     let db = MemoryStore::new();
 
-    let result = user_bucket.check_rate(bucket_id.clone(), 5, &db);
+    let result = user_bucket.check_rate(key.clone(), 5, &db);
 
     println!("result of request is {}", result);
-    let bs = db.find(bucket_id).unwrap();
+    let bs = db.find(key).unwrap();
     println!("bucket after update => {:?}", bs);
 }
 

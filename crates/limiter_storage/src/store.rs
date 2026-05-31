@@ -7,7 +7,7 @@ pub trait QueryDatabase<K, V> {
     where
         V: Clone;
 
-    fn update_bucket_status(&self, id: K, data: V,expires_at: Option<u64>);
+    fn update_bucket_status(&self, id: K, data: V, expires_at: Option<u64>);
     fn delete_bucket(&self, id: K);
 }
 
@@ -46,27 +46,23 @@ where
         Some(bucket_data.value.clone())
     }
 
-    fn update_bucket_status(&self, id: K, data: V,expires_at: Option<u64>) {
+    fn update_bucket_status(&self, id: K, data: V, expires_at: Option<u64>) {
         let mut bucket = self.map.write().unwrap();
 
-         bucket.remove(&id);
-
+        bucket.remove(&id);
 
         let storage_value = StoredValue::<V> {
             value: data,
             expires_at,
         };
 
-       
         bucket.insert(id, storage_value);
     }
 
     fn delete_bucket(&self, id: K) {
-
         let mut bucket = self.map.write().unwrap();
 
         bucket.remove(&id);
-
     }
 }
 

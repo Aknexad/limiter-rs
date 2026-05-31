@@ -1,5 +1,5 @@
 use crate::algorithms::token_bucket::TokenBucket;
-use crate::models::BucketState;
+use crate::models::bucket_state::BucketState;
 use crate::types::CheckRequestInput;
 use crate::utils;
 use limiter_storage::store::QueryDatabase;
@@ -64,7 +64,7 @@ where
             last_refill_timestamp: utils::time::timestamp(),
         };
         //update db
-        storage.update_bucket_status(data.id, new_data,None);
+        storage.update_bucket_status(data.id, new_data, None);
         println!("update bucket status");
         return result;
     } else {
@@ -79,7 +79,7 @@ where
     let current_tokens = capacity - consume;
     let new_bucket = BucketState::new(current_tokens, utils::time::timestamp());
     println!("create new bucket for user with id {}", &id);
-    storage.create(id, new_bucket,None);
+    storage.create(id, new_bucket, None);
 
     true
 }
