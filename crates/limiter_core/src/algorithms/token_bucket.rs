@@ -32,6 +32,10 @@ impl TokenBucket {
     pub fn refill_logic(last_refill: u64, refill_rate: u64, capacity: u64) -> u64 {
         let current_time = timestamp();
 
+        if last_refill > current_time {
+            return 0;
+        };
+
         let elapsed_time = current_time - last_refill;
         let current_tokens = elapsed_time * refill_rate;
 
