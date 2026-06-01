@@ -10,16 +10,6 @@ pub struct TokenBucket {
 }
 
 impl TokenBucket {
-    //test function
-    pub fn new_default_value() -> Self {
-        Self {
-            capacity: 100,
-            refill_rate: 1,
-            current_tokens: 10,
-            last_refill_timestamp: timestamp(),
-        }
-    }
-
     pub fn new(capacity: u64, refill_rate: u64) -> Self {
         Self {
             capacity,
@@ -37,7 +27,7 @@ impl TokenBucket {
         };
 
         let elapsed_time = current_time - last_refill;
-        let current_tokens = elapsed_time * refill_rate;
+        let current_tokens = elapsed_time.saturating_mul(refill_rate);
 
         current_tokens.min(capacity)
     }
@@ -47,6 +37,6 @@ impl TokenBucket {
     }
 
     pub fn reminder_token_after_request(consume_token: u64, current_tokens: u64) -> u64 {
-        current_tokens - consume_token
+        current_tokens.saturating_sub(consume_token)
     }
 }

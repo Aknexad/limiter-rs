@@ -20,7 +20,7 @@ fn main() {
 
     let input_data = models::key::RateLimiterInputData {
         service_name: "auth".to_string(),
-        key:Ip("85.23.11.34".to_string()),
+        key: Ip("85.23.11.34".to_string()),
     };
 
     let key = input_data.convert_to_storage_key();

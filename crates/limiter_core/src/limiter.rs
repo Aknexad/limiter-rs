@@ -76,10 +76,11 @@ fn create_new_consumer<S>(id: String, capacity: u64, consume: u64, storage: &S) 
 where
     S: QueryDatabase<String, BucketState>,
 {
-    let current_tokens = capacity - consume;
+    let current_tokens = capacity.saturating_sub(consume);
+    let allowed = consume <= capacity;
     let new_bucket = BucketState::new(current_tokens, utils::time::timestamp());
     println!("create new bucket for user with id {}", &id);
     storage.create(id, new_bucket, None);
 
-    true
+    allowed
 }

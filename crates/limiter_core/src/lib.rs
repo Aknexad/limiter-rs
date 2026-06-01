@@ -3,4 +3,4 @@ pub mod limiter;
 pub mod models;
 pub mod policy;
 pub mod types;
-mod utils;
+pub mod utils;
