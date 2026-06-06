@@ -27,7 +27,7 @@ mod tests {
     }
 
     impl MockStore {
-        fn with_bucket( self, key: &str, state: BucketState) -> Self {
+        fn with_bucket(self, key: &str, state: BucketState) -> Self {
             self.inner
                 .lock()
                 .unwrap()
@@ -179,5 +179,4 @@ mod tests {
         let saved = store.get("k1").unwrap();
         assert_eq!(saved.current_tokens, 0);
     }
-
 }

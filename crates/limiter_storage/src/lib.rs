@@ -1,3 +1,3 @@
 pub mod memory;
-//mod redis;
+pub mod redis;
 pub mod store;

@@ -1,7 +1,6 @@
 use limiter_storage::memory::memory_store::MemoryStore;
 use limiter_storage::memory::memory_store::StoredValue;
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
