@@ -1,13 +1,11 @@
-use std::ptr::read;
-
 use limiter_core::{
     algorithms,
     limiter::RateLimiter,
     models::{self, key::RateLimiterInputKey::Ip},
     policy,
 };
-use limiter_storage::redis;
-use limiter_storage::{memory::memory_store::MemoryStore, store::QueryDatabase};
+
+use limiter_storage::{memory::memory_store::MemoryStore, redis, store::QueryDatabase};
 
 fn main() {
     let config = policy::RatelimiterConfig {
@@ -26,8 +24,10 @@ fn main() {
         key: Ip("85.23.11.34".to_string()),
     };
 
+    // let redis_url = "redis://localhost:6376";
+
     let key = input_data.convert_to_storage_key();
-    let db = MemoryStore::new();
+    let db: MemoryStore<String, models::bucket_state::BucketState> = MemoryStore::new();
 
     let result = user_bucket.check_rate(key.clone(), 5, &db);
 
