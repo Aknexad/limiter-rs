@@ -1,5 +1,4 @@
-use redis::AsyncCommands;
-
+use redis;
 pub struct RedisStorage {
     pub client: redis::Client,
 }
@@ -9,12 +8,6 @@ impl RedisStorage {
         Ok(Self {
             client: redis::Client::open(url)?,
         })
-    }
-
-    pub async fn connection(
-        client: &redis::Client,
-    ) -> Result<redis::aio::MultiplexedConnection, redis::RedisError> {
-        client.get_multiplexed_async_connection().await
     }
 }
 

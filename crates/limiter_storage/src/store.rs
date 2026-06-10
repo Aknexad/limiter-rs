@@ -1,15 +1,11 @@
 use crate::memory::memory_store::{MemoryStore, StoredValue};
+use crate::redis::redis_storage::RedisStorage;
+use redis::AsyncCommands;
+use serde::{Serialize, de::DeserializeOwned};
+use serde_json;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-pub trait QueryDatabase<K, V> {
-    fn create(&self, id: K, data: V, expires_at: Option<u64>);
-    fn find(&self, id: K) -> Option<V>
-    where
-        V: Clone;
-
-    fn update_bucket_status(&self, id: K, data: V, expires_at: Option<u64>);
-    fn delete_bucket(&self, id: K);
-}
+use crate::traits::{AsyncQueryDatabase, QueryDatabase};
 
 impl<K, V> QueryDatabase<K, V> for MemoryStore<K, V>
 where
@@ -63,6 +59,94 @@ where
         let mut bucket = self.map.write().unwrap();
 
         bucket.remove(&id);
+    }
+}
+
+impl<V> AsyncQueryDatabase<V> for RedisStorage
+where
+    V: Serialize + DeserializeOwned + Clone + Send + Sync + 'static + redis::ToSingleRedisArg,
+{
+    fn create(
+        &self,
+        id: String,
+        data: V,
+        expires_at: Option<u64>,
+    ) -> impl Future<Output = ()> + Send {
+        async move {
+            let mut con = self
+                .client
+                .get_multiplexed_async_connection()
+                .await
+                .unwrap();
+
+            let value = serde_json::to_string(&data).unwrap();
+            let ttl = expires_at.unwrap_or(3600);
+
+            let _: () = AsyncCommands::set_ex(&mut con, id, value, ttl)
+                .await
+                .unwrap();
+        }
+    }
+
+    fn find(&self, id: String) -> impl Future<Output = Option<V>> + Send
+    where
+        V: Clone + Send,
+    {
+        async move {
+            let mut connection = self
+                .client
+                .get_multiplexed_async_connection()
+                .await
+                .unwrap();
+
+            let data = AsyncCommands::get::<_, Option<String>>(&mut connection, &id).await;
+
+            match data {
+                Ok(Some(raw)) => serde_json::from_str(&raw).ok(),
+                Ok(None) => None,
+                Err(err) => {
+                    println!("error: {}", err);
+                    None
+                }
+            }
+        }
+    }
+
+    // TODO fix logic
+    fn update_bucket_status(
+        &self,
+        id: String,
+        data: V,
+        expires_at: Option<u64>,
+    ) -> impl Future<Output = ()> + Send {
+        async move {
+            let mut con = self
+                .client
+                .get_multiplexed_async_connection()
+                .await
+                .unwrap();
+
+            let _: () = AsyncCommands::get_del(&mut con, &id).await.unwrap();
+
+            let value = serde_json::to_string(&data).unwrap();
+            let ttl = expires_at.unwrap_or(3600);
+
+            let _: () = AsyncCommands::set_ex(&mut con, id, value, ttl)
+                .await
+                .unwrap();
+        }
+    }
+
+    fn delete_bucket(&self, id: String) -> impl Future<Output = ()> + Send {
+        async move {
+            let mut con = self
+                .client
+                .get_multiplexed_async_connection()
+                .await
+                .unwrap();
+
+            let _: () = AsyncCommands::get_del(&mut con, id).await.unwrap();
+        }
     }
 }
 
