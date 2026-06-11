@@ -4,7 +4,7 @@ use std::sync::{Arc, Mutex};
 use limiter_core::algorithms::token_bucket::TokenBucket;
 use limiter_core::models::bucket_state::BucketState;
 use limiter_core::utils::time::timestamp;
-use limiter_storage::store::QueryDatabase;
+use limiter_storage::traits::QueryDatabase;
 
 #[cfg(test)]
 mod tests {
@@ -81,7 +81,9 @@ mod tests {
             g.updates.push((key, value));
         }
         #[warn(unused_variables)]
-        fn delete_bucket(&self, id: String) {}
+        fn delete_bucket(&self, id: String) {
+            println!("{}",id);
+        }
     }
 
     #[test]

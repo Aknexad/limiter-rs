@@ -2,7 +2,7 @@ use crate::algorithms::token_bucket::TokenBucket;
 use crate::models::bucket_state::BucketState;
 use crate::types::CheckRequestInput;
 use crate::utils;
-use limiter_storage::traits::{AsyncQueryDatabase, QueryDatabase};
+use limiter_storage::traits::{ QueryDatabase};
 pub trait RateLimiter {
     fn check_rate<S>(&self, key: String, consume: u64, storage: &S) -> bool
     where

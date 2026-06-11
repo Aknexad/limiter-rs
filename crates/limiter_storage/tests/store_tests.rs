@@ -1,5 +1,5 @@
-use limiter_storage::memory::memory_store::{MemoryStore, StoredValue};
-use limiter_storage::store::{QueryDatabase, timestamp};
+use limiter_storage::memory::memory_store::{MemoryStore};
+use limiter_storage::{traits::QueryDatabase, store::timestamp};
 use std::sync::Arc;
 use std::thread;
 
