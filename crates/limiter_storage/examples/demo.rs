@@ -1,4 +1,4 @@
-use limiter_storage::{redis, traits};
+use limiter_storage::{redis, store::AsyncRedisQueryDatabase};
 use serde::Serialize;
 use serde_json;
 
@@ -14,7 +14,9 @@ async fn main() {
     let redis_url = "redis://localhost:6379";
     let key = "test_key_1".to_string();
 
-    let redis_client = redis::redis_storage::RedisStorage::new(redis_url).unwrap();
+    let connection_manager = redis::redis_storage::RedisStorage::new(redis_url)
+        .await
+        .unwrap();
 
     let data = BucketData {
         server: "auth".to_string(),
@@ -24,13 +26,12 @@ async fn main() {
 
     let json_data = serde_json::to_string(&data).unwrap();
 
-    traits::AsyncQueryDatabase::create(&redis_client, key.clone(), json_data, None).await;
+    let _ = connection_manager
+        .create(key.clone(), json_data, None)
+        .await
+        .unwrap();
 
-    let read_db: Option<String> =
-        traits::AsyncQueryDatabase::find(&redis_client, key.clone()).await;
+    let find_kye: String = connection_manager.find(key).await.unwrap();
 
-    let x = read_db.unwrap();
-    println!("final result =>> {}", serde_json::to_value(x).unwrap());
-
-    // traits::AsyncQueryDatabase::<String>::delete_bucket(&redis_client, key.clone()).await;
+    println!("result of key is {}", find_kye);
 }

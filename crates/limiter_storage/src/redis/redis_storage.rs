@@ -1,13 +1,20 @@
-use redis;
+use redis::aio::ConnectionManager;
 pub struct RedisStorage {
-    pub client: redis::Client,
+    // pub client: redis::Client,
+    pub connections_manager: ConnectionManager,
 }
 
 impl RedisStorage {
-    pub fn new(url: &str) -> Result<Self, redis::RedisError> {
-        Ok(Self {
-            client: redis::Client::open(url)?,
-        })
+    pub async fn new(url: &str) -> Result<Self, redis::RedisError> {
+        let client = redis::Client::open(url)?;
+
+        let con_manager = ConnectionManager::new(client).await?;
+
+        let result = Self {
+            connections_manager: con_manager,
+        };
+
+        Ok(result)
     }
 }
 

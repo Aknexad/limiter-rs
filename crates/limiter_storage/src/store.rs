@@ -5,9 +5,18 @@ use serde::{Serialize, de::DeserializeOwned};
 use serde_json;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use crate::traits::{AsyncQueryDatabase, QueryDatabase};
+// in memory
+pub trait SyncMemoryQueryDatabase<K, V> {
+    fn create(&self, id: K, data: V, expires_at: Option<u64>);
+    fn find(&self, id: K) -> Option<V>
+    where
+        V: Clone;
 
-impl<K, V> QueryDatabase<K, V> for MemoryStore<K, V>
+    fn update_bucket_status(&self, id: K, data: V, expires_at: Option<u64>);
+    fn delete_bucket(&self, id: K);
+}
+
+impl<K, V> SyncMemoryQueryDatabase<K, V> for MemoryStore<K, V>
 where
     K: std::hash::Hash + Eq,
 {
@@ -62,7 +71,34 @@ where
     }
 }
 
-impl<V> AsyncQueryDatabase<V> for RedisStorage
+// REDIS
+
+pub trait AsyncRedisQueryDatabase<V>
+where
+    V: Serialize + DeserializeOwned + Clone + Send + Sync + 'static,
+{
+    fn create(
+        &self,
+        id: String,
+        data: V,
+        expires_at: Option<u64>,
+    ) -> impl Future<Output = Result<(), Box<dyn std::error::Error + Send + Sync>>> + Send;
+    fn find(&self, id: String) -> impl Future<Output = Option<V>> + Send
+    where
+        V: Clone + Send;
+
+    fn update_bucket_status(
+        &self,
+        id: String,
+        data: V,
+        expires_at: Option<u64>,
+    ) -> impl Future<Output = Result<(), Box<dyn std::error::Error + Send + Sync>>> + Send;
+    fn delete_bucket(
+        &self,
+        id: String,
+    ) -> impl Future<Output = Result<(), Box<dyn std::error::Error + Send + Sync>>> + Send;
+}
+impl<V> AsyncRedisQueryDatabase<V> for RedisStorage
 where
     V: Serialize + DeserializeOwned + Clone + Send + Sync + 'static + redis::ToSingleRedisArg,
 {
@@ -71,20 +107,16 @@ where
         id: String,
         data: V,
         expires_at: Option<u64>,
-    ) -> impl Future<Output = ()> + Send {
+    ) -> impl Future<Output = Result<(), Box<dyn std::error::Error + Send + Sync>>> + Send {
         async move {
-            let mut con = self
-                .client
-                .get_multiplexed_async_connection()
-                .await
-                .unwrap();
-
-            let value = serde_json::to_string(&data).unwrap();
+            let value = serde_json::to_string(&data)?;
             let ttl = expires_at.unwrap_or(3600);
 
-            let _: () = AsyncCommands::set_ex(&mut con, id, value, ttl)
-                .await
-                .unwrap();
+            let _: () =
+                AsyncCommands::set_ex(&mut self.connections_manager.clone(), id, value, ttl)
+                    .await?;
+
+            Ok(())
         }
     }
 
@@ -93,11 +125,7 @@ where
         V: Clone + Send,
     {
         async move {
-            let mut connection = self
-                .client
-                .get_multiplexed_async_connection()
-                .await
-                .unwrap();
+            let mut connection = self.connections_manager.clone();
 
             let data = AsyncCommands::get::<_, Option<String>>(&mut connection, &id).await;
 
@@ -112,40 +140,32 @@ where
         }
     }
 
-    // TODO fix logic
     fn update_bucket_status(
         &self,
         id: String,
         data: V,
         expires_at: Option<u64>,
-    ) -> impl Future<Output = ()> + Send {
+    ) -> impl Future<Output = Result<(), Box<dyn std::error::Error + Send + Sync>>> + Send {
+        let mut con = self.connections_manager.clone();
         async move {
-            let mut con = self
-                .client
-                .get_multiplexed_async_connection()
-                .await
-                .unwrap();
-
-            let _: () = AsyncCommands::get_del(&mut con, &id).await.unwrap();
-
-            let value = serde_json::to_string(&data).unwrap();
+            let value: String = serde_json::to_string(&data)?;
             let ttl = expires_at.unwrap_or(3600);
 
-            let _: () = AsyncCommands::set_ex(&mut con, id, value, ttl)
-                .await
-                .unwrap();
+            let _: () = AsyncCommands::set_ex(&mut con, id, value, ttl).await?;
+
+            Ok(())
         }
     }
 
-    fn delete_bucket(&self, id: String) -> impl Future<Output = ()> + Send {
+    fn delete_bucket(
+        &self,
+        id: String,
+    ) -> impl Future<Output = Result<(), Box<dyn std::error::Error + Send + Sync>>> + Send {
+        let mut con = self.connections_manager.clone();
         async move {
-            let mut con = self
-                .client
-                .get_multiplexed_async_connection()
-                .await
-                .unwrap();
+            let _: () = AsyncCommands::del(&mut con, id).await?;
 
-            let _: () = AsyncCommands::get_del(&mut con, id).await.unwrap();
+            Ok(())
         }
     }
 }

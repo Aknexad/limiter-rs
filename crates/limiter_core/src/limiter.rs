@@ -2,11 +2,11 @@ use crate::algorithms::token_bucket::TokenBucket;
 use crate::models::bucket_state::BucketState;
 use crate::types::CheckRequestInput;
 use crate::utils;
-use limiter_storage::traits::{ QueryDatabase};
+use limiter_storage::store::SyncMemoryQueryDatabase;
 pub trait RateLimiter {
     fn check_rate<S>(&self, key: String, consume: u64, storage: &S) -> bool
     where
-        S: QueryDatabase<String, BucketState>;
+        S: SyncMemoryQueryDatabase<String, BucketState>;
 
     fn message(&self) {
         println!("a request arrives !");
@@ -17,7 +17,7 @@ pub trait RateLimiter {
 impl RateLimiter for TokenBucket {
     fn check_rate<S>(&self, key: String, consume: u64, storage: &S) -> bool
     where
-        S: QueryDatabase<String, BucketState>,
+        S: SyncMemoryQueryDatabase<String, BucketState>,
     {
         let bucket = storage.find(key.clone());
 
@@ -45,7 +45,7 @@ impl RateLimiter for TokenBucket {
 
 fn check_request<S>(data: CheckRequestInput<BucketState>, storage: &S) -> bool
 where
-    S: QueryDatabase<String, BucketState>,
+    S: SyncMemoryQueryDatabase<String, BucketState>,
 {
     let total_left_token = TokenBucket::refill_logic(
         data.bucket_state.last_refill_timestamp,
@@ -74,7 +74,7 @@ where
 
 fn create_new_consumer<S>(id: String, capacity: u64, consume: u64, storage: &S) -> bool
 where
-    S: QueryDatabase<String, BucketState>,
+    S: SyncMemoryQueryDatabase<String, BucketState>,
 {
     let current_tokens = capacity.saturating_sub(consume);
     let allowed = consume <= capacity;
