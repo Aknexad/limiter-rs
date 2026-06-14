@@ -52,7 +52,7 @@ where
 
 pub async fn async_check_request<S>(data: CheckRequestInput<BucketState>, storage: &S) -> bool
 where
-    S: AsyncRedisQueryDatabase<String>,
+    S: AsyncRedisQueryDatabase<BucketState>,
 {
     let total_left_token = TokenBucket::refill_logic(
         data.bucket_state.last_refill_timestamp,
@@ -71,7 +71,10 @@ where
             last_refill_timestamp: utils::time::timestamp(),
         };
         //update db
-        storage.update_bucket_status(data.id, new_data, None).await;
+        storage
+            .update_bucket_status(data.id, new_data, None)
+            .await
+            .unwrap();
         println!("update bucket status");
         return result;
     } else {
@@ -86,13 +89,13 @@ pub async fn async_create_new_consumer<S>(
     storage: &S,
 ) -> bool
 where
-    S: AsyncRedisQueryDatabase<String>,
+    S: AsyncRedisQueryDatabase<BucketState>,
 {
     let current_tokens = capacity.saturating_sub(consume);
     let allowed = consume <= capacity;
     let new_bucket = BucketState::new(current_tokens, utils::time::timestamp());
     println!("create new bucket for user with id {}", &id);
-    storage.create(id, new_bucket, None);
+    storage.create(id, new_bucket, None).await.unwrap();
 
     allowed
 }

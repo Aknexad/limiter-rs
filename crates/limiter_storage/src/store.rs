@@ -73,10 +73,7 @@ where
 
 // REDIS
 
-pub trait AsyncRedisQueryDatabase<V>
-where
-    V: Serialize + DeserializeOwned + Clone + Send + Sync + 'static,
-{
+pub trait AsyncRedisQueryDatabase<V> {
     fn create(
         &self,
         id: String,
@@ -100,7 +97,7 @@ where
 }
 impl<V> AsyncRedisQueryDatabase<V> for RedisStorage
 where
-    V: Serialize + DeserializeOwned + Clone + Send + Sync + 'static + redis::ToSingleRedisArg,
+    V: Serialize + DeserializeOwned + Clone + Send + Sync + 'static,
 {
     fn create(
         &self,
