@@ -4,7 +4,7 @@ use std::sync::{Arc, Mutex};
 use limiter_core::algorithms::token_bucket::TokenBucket;
 use limiter_core::models::bucket_state::BucketState;
 use limiter_core::utils::time::timestamp;
-use limiter_storage::traits::QueryDatabase;
+use limiter_storage::store::SyncMemoryQueryDatabase;
 
 #[cfg(test)]
 mod tests {
@@ -64,7 +64,7 @@ mod tests {
     // If your trait differs slightly (e.g. &mut self, Result, different ttl type),
     // tell me and I’ll adjust to compile exactly.
 
-    impl QueryDatabase<String, BucketState> for MockStore {
+    impl SyncMemoryQueryDatabase<String, BucketState> for MockStore {
         fn find(&self, key: String) -> Option<BucketState> {
             self.inner.lock().unwrap().map.get(&key).cloned()
         }
@@ -82,7 +82,7 @@ mod tests {
         }
         #[warn(unused_variables)]
         fn delete_bucket(&self, id: String) {
-            println!("{}",id);
+            println!("{}", id);
         }
     }
 

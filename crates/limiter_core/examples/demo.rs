@@ -5,8 +5,8 @@ use limiter_core::{
     policy,
 };
 
-use limiter_storage::traits::QueryDatabase;
-use limiter_storage::{memory::memory_store::MemoryStore};
+use limiter_storage::memory::memory_store::MemoryStore;
+use limiter_storage::store::SyncMemoryQueryDatabase;
 
 fn main() {
     let config = policy::RatelimiterConfig {

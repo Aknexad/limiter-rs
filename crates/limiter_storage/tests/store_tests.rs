@@ -1,5 +1,5 @@
-use limiter_storage::memory::memory_store::{MemoryStore};
-use limiter_storage::{traits::QueryDatabase, store::timestamp};
+use limiter_storage::memory::memory_store::MemoryStore;
+use limiter_storage::{store::SyncMemoryQueryDatabase, store::timestamp};
 use std::sync::Arc;
 use std::thread;
 
@@ -11,9 +11,9 @@ mod tests {
     fn create_inserts_new_value_when_key_missing() {
         let store: MemoryStore<String, u64> = MemoryStore::new();
 
-        QueryDatabase::create(&store, "k1".to_string(), 10, None);
+        SyncMemoryQueryDatabase::create(&store, "k1".to_string(), 10, None);
 
-        let got = QueryDatabase::find(&store, "k1".to_string());
+        let got = SyncMemoryQueryDatabase::find(&store, "k1".to_string());
         assert_eq!(got, Some(10));
 
         // Also verify internal representation
@@ -27,11 +27,11 @@ mod tests {
     fn create_does_not_overwrite_existing_key() {
         let store: MemoryStore<String, u64> = MemoryStore::new();
 
-        QueryDatabase::create(&store, "k1".to_string(), 10, None);
-        QueryDatabase::create(&store, "k1".to_string(), 99, Some(123));
+        SyncMemoryQueryDatabase::create(&store, "k1".to_string(), 10, None);
+        SyncMemoryQueryDatabase::create(&store, "k1".to_string(), 99, Some(123));
 
         // Since create uses entry().or_insert_with(...), the first value should remain
-        let got = QueryDatabase::find(&store, "k1".to_string());
+        let got = SyncMemoryQueryDatabase::find(&store, "k1".to_string());
         assert_eq!(got, Some(10));
 
         let map = store.map.read().unwrap();
@@ -44,7 +44,7 @@ mod tests {
     fn find_returns_none_for_missing_key() {
         let store: MemoryStore<String, u64> = MemoryStore::new();
 
-        let got = QueryDatabase::find(&store, "missing".to_string());
+        let got = SyncMemoryQueryDatabase::find(&store, "missing".to_string());
         assert_eq!(got, None);
     }
 
@@ -53,14 +53,14 @@ mod tests {
         let store: MemoryStore<String, String> = MemoryStore::new();
 
         let now = timestamp();
-        QueryDatabase::create(
+        SyncMemoryQueryDatabase::create(
             &store,
             "k1".to_string(),
             "value".to_string(),
             Some(now + 60),
         );
 
-        let got = QueryDatabase::find(&store, "k1".to_string());
+        let got = SyncMemoryQueryDatabase::find(&store, "k1".to_string());
         assert_eq!(got, Some("value".to_string()));
     }
 
@@ -69,9 +69,9 @@ mod tests {
     //     let store: MemoryStore<String, u64> = MemoryStore::new();
 
     //     let now = timestamp();
-    //     QueryDatabase::create(&store, "k1".to_string(), 10, Some(now.saturating_sub(1)));
+    //     SyncMemoryQueryDatabase::create(&store, "k1".to_string(), 10, Some(now.saturating_sub(1)));
 
-    //     let got = QueryDatabase::find(&store, "k1".to_string());
+    //     let got = SyncMemoryQueryDatabase::find(&store, "k1".to_string());
     //     assert_eq!(got, None);
 
     //     // Side effect: it should delete the expired key
@@ -84,9 +84,9 @@ mod tests {
     //     let store: MemoryStore<String, u64> = MemoryStore::new();
 
     //     let now = timestamp();
-    //     QueryDatabase::create(&store, "k1".to_string(), 10, Some(now));
+    //     SyncMemoryQueryDatabase::create(&store, "k1".to_string(), 10, Some(now));
 
-    //     let got = QueryDatabase::find(&store, "k1".to_string());
+    //     let got = SyncMemoryQueryDatabase::find(&store, "k1".to_string());
     //     assert_eq!(got, None);
 
     //     let map = store.map.read().unwrap();
@@ -97,14 +97,14 @@ mod tests {
     fn delete_bucket_removes_key_and_is_idempotent() {
         let store: MemoryStore<String, u64> = MemoryStore::new();
 
-        QueryDatabase::create(&store, "k1".to_string(), 10, None);
-        QueryDatabase::delete_bucket(&store, "k1".to_string());
+        SyncMemoryQueryDatabase::create(&store, "k1".to_string(), 10, None);
+        SyncMemoryQueryDatabase::delete_bucket(&store, "k1".to_string());
 
-        let got = QueryDatabase::find(&store, "k1".to_string());
+        let got = SyncMemoryQueryDatabase::find(&store, "k1".to_string());
         assert_eq!(got, None);
 
         // idempotent: deleting again should not panic
-        QueryDatabase::delete_bucket(&store, "k1".to_string());
+        SyncMemoryQueryDatabase::delete_bucket(&store, "k1".to_string());
     }
 
     #[test]
@@ -112,11 +112,16 @@ mod tests {
         let store: MemoryStore<String, u64> = MemoryStore::new();
         let now = timestamp();
 
-        QueryDatabase::create(&store, "k1".to_string(), 10, Some(now + 100));
+        SyncMemoryQueryDatabase::create(&store, "k1".to_string(), 10, Some(now + 100));
 
-        QueryDatabase::update_bucket_status(&store, "k1".to_string(), 77, Some(now + 200));
+        SyncMemoryQueryDatabase::update_bucket_status(
+            &store,
+            "k1".to_string(),
+            77,
+            Some(now + 200),
+        );
 
-        let got = QueryDatabase::find(&store, "k1".to_string());
+        let got = SyncMemoryQueryDatabase::find(&store, "k1".to_string());
         assert_eq!(got, Some(77));
 
         let map = store.map.read().unwrap();
@@ -129,9 +134,9 @@ mod tests {
     fn update_bucket_status_inserts_when_key_missing() {
         let store: MemoryStore<String, u64> = MemoryStore::new();
 
-        QueryDatabase::update_bucket_status(&store, "k1".to_string(), 55, None);
+        SyncMemoryQueryDatabase::update_bucket_status(&store, "k1".to_string(), 55, None);
 
-        let got = QueryDatabase::find(&store, "k1".to_string());
+        let got = SyncMemoryQueryDatabase::find(&store, "k1".to_string());
         assert_eq!(got, Some(55));
     }
 
@@ -139,9 +144,9 @@ mod tests {
     fn find_does_not_delete_when_no_expiration_set() {
         let store: MemoryStore<String, u64> = MemoryStore::new();
 
-        QueryDatabase::create(&store, "k1".to_string(), 10, None);
+        SyncMemoryQueryDatabase::create(&store, "k1".to_string(), 10, None);
 
-        let got = QueryDatabase::find(&store, "k1".to_string());
+        let got = SyncMemoryQueryDatabase::find(&store, "k1".to_string());
         assert_eq!(got, Some(10));
 
         let map = store.map.read().unwrap();
@@ -156,7 +161,7 @@ mod tests {
         for i in 0..10u64 {
             let s = Arc::clone(&store);
             handles.push(thread::spawn(move || {
-                QueryDatabase::create(&*s, "same".to_string(), i, None);
+                SyncMemoryQueryDatabase::create(&*s, "same".to_string(), i, None);
             }));
         }
         for h in handles {
@@ -173,13 +178,13 @@ mod tests {
     fn concurrent_update_and_find_basic_sanity() {
         let store: Arc<MemoryStore<String, u64>> = Arc::new(MemoryStore::new());
 
-        QueryDatabase::create(&*store, "k1".to_string(), 1, None);
+        SyncMemoryQueryDatabase::create(&*store, "k1".to_string(), 1, None);
 
         let updater = {
             let s = Arc::clone(&store);
             thread::spawn(move || {
                 for v in 2..200u64 {
-                    QueryDatabase::update_bucket_status(&*s, "k1".to_string(), v, None);
+                    SyncMemoryQueryDatabase::update_bucket_status(&*s, "k1".to_string(), v, None);
                 }
             })
         };
@@ -189,7 +194,7 @@ mod tests {
             thread::spawn(move || {
                 // Just ensure no panic / deadlock and returned value is always Some (no TTL).
                 for _ in 0..200 {
-                    let got = QueryDatabase::find(&*s, "k1".to_string());
+                    let got = SyncMemoryQueryDatabase::find(&*s, "k1".to_string());
                     assert!(got.is_some());
                 }
             })
