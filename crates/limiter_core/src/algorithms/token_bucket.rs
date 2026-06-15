@@ -27,9 +27,9 @@ impl TokenBucket {
         };
 
         let elapsed_time = current_time - last_refill;
-        let current_tokens = elapsed_time.saturating_mul(refill_rate);
+        let replenish_token = elapsed_time.saturating_mul(refill_rate);
 
-        current_tokens.min(capacity)
+        replenish_token.min(capacity)
     }
 
     pub fn allow_deny_request(current_tokens: u64, consume_tokens: u64) -> bool {
@@ -38,5 +38,19 @@ impl TokenBucket {
 
     pub fn reminder_token_after_request(consume_token: u64, current_tokens: u64) -> u64 {
         current_tokens.saturating_sub(consume_token)
+    }
+
+    pub fn maximum_available_token_for_request(
+        current_tokens: u64,
+        replenish_token: u64,
+        max_capacity: u64,
+    ) -> u64 {
+        let total = current_tokens + replenish_token;
+
+        if total >= max_capacity {
+            max_capacity
+        } else {
+            total
+        }
     }
 }

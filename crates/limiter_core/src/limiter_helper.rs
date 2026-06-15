@@ -10,9 +10,15 @@ pub fn check_request<S>(data: CheckRequestInput<BucketState>, storage: &S) -> bo
 where
     S: SyncMemoryQueryDatabase<String, BucketState>,
 {
-    let total_left_token = TokenBucket::refill_logic(
+    let replenish_token = TokenBucket::refill_logic(
         data.bucket_state.last_refill_timestamp,
         data.refill_rate,
+        data.capacity,
+    );
+
+    let total_left_token = TokenBucket::maximum_available_token_for_request(
+        data.bucket_state.current_tokens,
+        replenish_token,
         data.capacity,
     );
 
@@ -20,7 +26,7 @@ where
 
     if result {
         let token_left_after_request =
-            TokenBucket::reminder_token_after_request(total_left_token, data.consume);
+            TokenBucket::reminder_token_after_request(data.consume, total_left_token);
 
         let new_data: BucketState = BucketState {
             current_tokens: token_left_after_request,
@@ -28,7 +34,6 @@ where
         };
         //update db
         storage.update_bucket_status(data.id, new_data, None);
-        println!("update bucket status");
         return result;
     } else {
         return result;
@@ -54,9 +59,15 @@ pub async fn async_check_request<S>(data: CheckRequestInput<BucketState>, storag
 where
     S: AsyncRedisQueryDatabase<BucketState>,
 {
-    let total_left_token = TokenBucket::refill_logic(
+    let replenish_token = TokenBucket::refill_logic(
         data.bucket_state.last_refill_timestamp,
         data.refill_rate,
+        data.capacity,
+    );
+
+    let total_left_token = TokenBucket::maximum_available_token_for_request(
+        data.bucket_state.current_tokens,
+        replenish_token,
         data.capacity,
     );
 

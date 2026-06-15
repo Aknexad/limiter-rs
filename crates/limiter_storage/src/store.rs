@@ -18,7 +18,8 @@ pub trait SyncMemoryQueryDatabase<K, V> {
 
 impl<K, V> SyncMemoryQueryDatabase<K, V> for MemoryStore<K, V>
 where
-    K: std::hash::Hash + Eq,
+    K: std::hash::Hash + Eq + std::fmt::Debug,
+    V: std::fmt::Debug,
 {
     fn create(&self, id: K, data: V, expires_at: Option<u64>) {
         let mut write_db = self.map.write().unwrap();
