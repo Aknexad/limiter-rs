@@ -1,6 +1,6 @@
-// use std::time;
+use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BucketState {
     pub current_tokens: u64,
     pub last_refill_timestamp: u64,

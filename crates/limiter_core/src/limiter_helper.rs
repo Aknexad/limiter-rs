@@ -75,18 +75,18 @@ where
 
     if result {
         let token_left_after_request =
-            TokenBucket::reminder_token_after_request(total_left_token, data.consume);
+            TokenBucket::reminder_token_after_request(data.consume, total_left_token);
 
         let new_data: BucketState = BucketState {
             current_tokens: token_left_after_request,
             last_refill_timestamp: utils::time::timestamp(),
         };
+
         //update db
         storage
             .update_bucket_status(data.id, new_data, None)
             .await
             .unwrap();
-        println!("update bucket status");
         return result;
     } else {
         return result;
