@@ -3,6 +3,9 @@
 ![Rust](https://img.shields.io/badge/rust-1.70%2B-000000.svg?logo=rust)
 [![License](https://img.shields.io/badge/License-Apache--2.0-blue.svg)](LICENSE)
 
+> **Important:** This project is developed for learning and experimentation.  
+> It is **not production-ready** and should not be used as-is in production environments.
+
 `limiter-rs` is a lightweight, distributed-friendly rate-limiting library built in Rust.
 It uses a **token bucket** algorithm and supports both in-memory and Redis-backed
 storage for scalable request control.
@@ -17,7 +20,15 @@ storage for scalable request control.
 - [Configuration](#configuration)
 - [Storage Backends](#storage-backends)
 - [Testing](#testing)
+- [Production Readiness](#production-readiness)
 - [License](#license)
+
+## Production Readiness
+
+This repository is intentionally educational and prioritizes learning and iteration.
+Before using this library in production, you should implement additional hardening,
+monitoring, and reliability safeguards (for example: robust Redis error handling,
+metrics, testing for failure modes, and deployment-specific security controls).
 
 ## Highlights
 
