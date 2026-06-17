@@ -1,53 +1,71 @@
 # limiter-rs
 
-Distributed rate limiter built with a token-bucket strategy in Rust.
+![Rust](https://img.shields.io/badge/rust-1.70%2B-000000.svg?logo=rust)
+[![License](https://img.shields.io/badge/License-Apache--2.0-blue.svg)](LICENSE)
 
-## Overview
+`limiter-rs` is a lightweight, distributed-friendly rate-limiting library built in Rust.
+It uses a **token bucket** algorithm and supports both in-memory and Redis-backed
+storage for scalable request control.
 
-This workspace contains two crates:
+## Table of Contents
 
-- `limiter_core`: token-bucket algorithm and limiter trait.
-- `limiter_storage`: pluggable storage backends (in-memory and Redis).
+- [Highlights](#highlights)
+- [Repository Structure](#repository-structure)
+- [Key Types](#key-types)
+- [Core Concepts](#core-concepts)
+- [Quick Start](#quick-start)
+- [Configuration](#configuration)
+- [Storage Backends](#storage-backends)
+- [Testing](#testing)
+- [License](#license)
 
-Use `limiter_core` in your app to perform checks, and configure storage from `limiter_storage`.
+## Highlights
 
-## Crates
+- Token-bucket throttling with configurable capacity and refill rate.
+- Sync and async API support via a shared algorithm.
+- Deterministic storage-key generation (`Ip`, `UserId`, `ApiKey`, `UUID`).
+- Extensible storage abstraction with pluggable implementations.
+- Workspace layout suitable for reuse in microservices or shared infra crates.
+
+## Repository Structure
+
+- `crates/limiter_core`: algorithm, limiter trait, domain models, and policy types.
+- `crates/limiter_storage`: storage traits and backend implementations.
+- `tests/`: integration tests for end-to-end behavior.
+- `crates/limiter_core/examples/demo.rs`: runnable usage example.
+
+## Key Types
 
 ### `limiter_core`
 
-- `algorithms::token_bucket::TokenBucket`: token-bucket implementation.
-- `limiter::RateLimiter`: trait with sync and async rate-limit checks.
-- `models::bucket_state::BucketState`: stored bucket state (`current_tokens`, `last_refill_timestamp`).
-- `models::key::{RateLimiterInputData, RateLimiterInputKey}`: helpers for consistent request keys.
-- `policy::{RatelimiterConfig, StorageConfig, StorageType, AppConfig}`: config structs.
+- `algorithms::token_bucket::TokenBucket`
+- `limiter::RateLimiter`
+- `models::bucket_state::BucketState`
+- `models::key::RateLimiterInputData`
+- `models::key::RateLimiterInputKey`
+- `policy::{RatelimiterConfig, StorageConfig, StorageType, AppConfig}`
 
 ### `limiter_storage`
 
-- `memory::memory_store::MemoryStore`: thread-safe in-memory store.
-- `redis::redis_storage::RedisStorage`: Redis-backed async storage.
-- `store::{SyncMemoryQueryDatabase, AsyncRedisQueryDatabase}`: storage traits used by limiter logic.
+- `memory::memory_store::MemoryStore`
+- `redis::redis_storage::RedisStorage`
+- `store::{SyncMemoryQueryDatabase, AsyncRedisQueryDatabase}`
 
-## Architecture
+## Core Concepts
 
-`TokenBucket` contains capacity and refill rate. For each request:
+1. A `TokenBucket` instance defines request budget:
+   - `capacity`: maximum tokens in bucket.
+   - `refill_rate`: tokens regenerated per second.
+2. `check_rate` / `async_check_rate` computes current available tokens:
+   - applies refill logic using the last update timestamp.
+3. Request is allowed only if tokens are sufficient.
+4. For allowed requests, state is updated in the selected storage backend.
 
-1. Fetch bucket state from storage by key.
-2. Refill tokens based on elapsed time.
-3. Allow/deny based on remaining tokens.
-4. If allowed, persist updated bucket state.
+## Quick Start
 
-## Installation
+### Add dependencies
 
-### Local workspace usage
-
-From the workspace root:
-
-```bash
-git clone <repo-url>
-cd limiter-rs
-```
-
-In a workspace root `Cargo.toml`:
+From the workspace root, use local paths while developing:
 
 ```toml
 [dependencies]
@@ -55,20 +73,19 @@ limiter_core = { path = "crates/limiter_core" }
 limiter_storage = { path = "crates/limiter_storage" }
 ```
 
-## Quick start (sync, in-memory)
+### Sync example (in-memory)
 
 ```rust
 use limiter_core::{
     algorithms::token_bucket::TokenBucket,
     limiter::RateLimiter,
-    models::{bucket_state::BucketState, key::RateLimiterInputKey},
+    models::{bucket_state::BucketState, key::{RateLimiterInputData, RateLimiterInputKey}},
 };
-use limiter_core::models::key::RateLimiterInputData;
 use limiter_storage::memory::memory_store::MemoryStore;
 
 fn main() {
     let bucket = TokenBucket::new(100, 1);
-    let mut storage: MemoryStore<String, BucketState> = MemoryStore::new();
+    let storage: MemoryStore<String, BucketState> = MemoryStore::new();
 
     let key = RateLimiterInputData {
         service_name: "auth".to_string(),
@@ -77,19 +94,18 @@ fn main() {
     .convert_to_storage_key();
 
     let allowed = bucket.check_rate(key, 5, &storage);
-    println!("request allowed: {}", allowed);
+    println!("request allowed: {allowed}");
 }
 ```
 
-## Quick start (async, Redis)
+### Async example (Redis)
 
 ```rust
 use limiter_core::{
     algorithms::token_bucket::TokenBucket,
     limiter::RateLimiter,
-    models::{bucket_state::BucketState, key::RateLimiterInputKey},
+    models::{bucket_state::BucketState, key::{RateLimiterInputData, RateLimiterInputKey}},
 };
-use limiter_core::models::key::RateLimiterInputData;
 use limiter_storage::redis::redis_storage::RedisStorage;
 
 #[tokio::main]
@@ -104,35 +120,44 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     .convert_to_storage_key();
 
     let allowed = bucket.async_check_rate(key, 1, &storage).await;
-    println!("request allowed: {}", allowed);
+    println!("request allowed: {allowed}");
     Ok(())
 }
 ```
 
-## Configuration structs
+## Configuration
 
-- `RatelimiterConfig`: capacity, refill rate, and bucket TTL.
-- `StorageConfig`: storage type (`Memory` or `Redis`) and optional `redis_url`.
-- `AppConfig`: root config object that combines both.
+Use these config structs to initialize limiter and storage choices from a single
+configuration source:
 
-You can use them in your own config loader and pass values into
-`TokenBucket::new(...)` and storage initialization.
+- `RatelimiterConfig`: token bucket limits and TTL settings.
+- `StorageConfig`: choose backend (`Memory` or `Redis`) and optional Redis URL.
+- `AppConfig`: combines rate limiter and storage config.
 
-## Build and test
+`limiter_storage` does not read config directly; pass constructed values into
+your chosen backend initialization.
+
+## Storage Backends
+
+- `MemoryStore`
+  - Thread-safe, in-process storage.
+  - Suitable for single-process or test scenarios.
+- `RedisStorage`
+  - Async distributed storage using Redis.
+  - Defaults to TTL of 3600 seconds when expiration is not provided.
+
+## Testing
 
 ```bash
-# run all workspace tests
 cargo test
+```
 
-# run core demo example
+To run the example:
+
+```bash
 cargo run --example demo -p limiter_core
 ```
 
-## Storage notes
-
-- `MemoryStore` stores values in-memory and uses optional TTL checks on read.
-- `RedisStorage` persists serialized bucket state and uses a default TTL of 3600 seconds when no expiration is provided.
-
 ## License
 
-MIT (see `LICENSE`).
+Licensed under the Apache License 2.0. See `LICENSE`.
